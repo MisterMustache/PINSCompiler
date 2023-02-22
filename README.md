@@ -1,0 +1,2 @@
+# PINSCompiler
+Prevajalnik jezika PINS.
