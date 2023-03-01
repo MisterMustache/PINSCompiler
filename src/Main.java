@@ -9,7 +9,6 @@ import java.nio.file.Paths;
 
 import cli.PINS;
 import cli.PINS.Phase;
-import compiler.lexer.IllegalCharacterException;
 import compiler.lexer.Lexer;
 
 public class Main {
@@ -27,12 +26,12 @@ public class Main {
     // -------------------------------------------------------------------
 
 
-    private static void run(PINS cli) throws IOException, IllegalCharacterException {
+    private static void run(PINS cli) throws IOException {
         var sourceCode = Files.readString(Paths.get(cli.sourceFile));
         run(cli, sourceCode);
     }
 
-    private static void run(PINS cli, String sourceCode) throws IllegalCharacterException {
+    private static void run(PINS cli, String sourceCode) {
         /*
          * Izvedi leksikalno analizo.
          */
