@@ -121,7 +121,7 @@ public class Lexer {
                 } else if (isSpecial(currentChar)) {
                     wordTokenClass = "OPERAND";
                     word.append(currentChar);
-                } else if (isLetter(currentChar)) { // Tukaj padejo vsi ostali tipi (ker so vsi na nek način posebni)
+                } else if (isLetter(currentChar) || currentChar == '_') { // Tukaj padejo vsi ostali tipi (ker so vsi na nek način posebni)
                     wordTokenClass = "OTHER";
                     word.append(currentChar);
                 } else if (isWhitespace(currentChar)) {
@@ -377,6 +377,8 @@ public class Lexer {
      * @param givenChar Podan znak.
      * @return <code>boolean</code>
      */
+
+//    @SuppressWarnings("All")
     private boolean isLetter(char givenChar) {
         if ((int)givenChar >= 65 && (int)givenChar <= 90) // A to Z
             return true;
