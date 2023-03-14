@@ -5,14 +5,14 @@
 
 package compiler.lexer;
 
-import common.Report;
-
 import static common.RequireNonNull.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import common.Report;
 
 public class Lexer {
     /**
@@ -101,7 +101,7 @@ public class Lexer {
          */
         lineCntr = 1; // ponastavimo števec vrstic
         colCntr = 0; // ponastavimo števec stolpcev
-        var wordLocBegin = new int[]{1, 1};
+        var wordLocBegin = new int[]{0, 0};
 
         var word = new StringBuilder(); // trenuten leksem
         var midWord = false; // sredi leksema?
@@ -308,8 +308,8 @@ public class Lexer {
 
         symbols.add(
                 new Symbol(
-                        new Position.Location(-1, -1),
-                        new Position.Location(-1, -1),
+                        new Position.Location(wordLocBegin[0], colCntr - 1),
+                        new Position.Location(lineCntr, colCntr - 1),
                         TokenType.EOF,
                         "$"
                 )
@@ -425,14 +425,12 @@ public class Lexer {
 
     /**
      * Dobi znak in vrne <code>true</code>, če je znak za novo vrstico in <code>false</code>, če ni.
+     * Za novo vrstico se šteje le '\n' oz. LF (line-feed), '\r' oz. CR (carriage-return) pa se ne.
      * @param givenChar Podan znak.
      * @return <code>boolean</code>
      */
     private boolean isNewline(char givenChar) {
-        return switch ((int) givenChar) {
-            case 10, 13 -> true;
-            default -> false;
-        };
+        return (int) givenChar == 10;
     }
 
     /**
