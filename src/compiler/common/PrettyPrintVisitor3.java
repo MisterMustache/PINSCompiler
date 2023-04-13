@@ -9,9 +9,8 @@ import static common.StringUtil.*;
 import static common.RequireNonNull.requireNonNull;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 import common.VoidOperator;
 import compiler.parser.ast.*;
@@ -20,9 +19,11 @@ import compiler.parser.ast.expr.*;
 import compiler.parser.ast.type.Array;
 import compiler.parser.ast.type.Atom;
 import compiler.parser.ast.type.TypeName;
+import compiler.seman.common.NodeDescription;
+import compiler.seman.type.type.Type;
 
-@SuppressWarnings("unused")
-public class PrettyPrintVisitor1 implements Visitor {
+@SuppressWarnings({"CodeBlock2Expr", "unused"})
+public class PrettyPrintVisitor3 implements Visitor {
     /**
      * Trenutna indentacija.
      */
@@ -36,8 +37,19 @@ public class PrettyPrintVisitor1 implements Visitor {
     /**
      * Izhodni tok, na katerega se izpiše drevo.
      */
-    @SuppressWarnings("FieldMayBeFinal")
-    private PrintStream stream;
+    private final PrintStream stream;
+
+    /**
+     * Razrešena imena. 
+     */
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    public Optional<NodeDescription<Def>> definitions = Optional.empty();
+
+    /**
+     * Razrešeni podatkovni tipi. 
+     */
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    public Optional<NodeDescription<Type>> types = Optional.empty();
 
     /**
      * Ustvari novo instanco.
@@ -45,7 +57,7 @@ public class PrettyPrintVisitor1 implements Visitor {
      * @param increaseIndentBy za koliko naj se poveča indentacija pri gnezdenju.
      * @param stream izhodni tok.
      */
-    public PrettyPrintVisitor1(int increaseIndentBy, PrintStream stream) {
+    public PrettyPrintVisitor3(int increaseIndentBy, PrintStream stream) {
         requireNonNull(stream);
         this.increaseIndentBy = increaseIndentBy;
         this.stream = stream;
@@ -57,30 +69,22 @@ public class PrettyPrintVisitor1 implements Visitor {
      * 
      * @param stream izhodni tok.
      */
-    @SuppressWarnings("UnusedConstructor")
-    public PrettyPrintVisitor1(PrintStream stream) {
+    public PrettyPrintVisitor3(PrintStream stream) {
         requireNonNull(stream);
         this.increaseIndentBy = 4;
         this.stream = stream;
-
-        //noinspection MismatchedQueryAndUpdateOfCollection
-        var xs = new ArrayList<Integer>();
-        //noinspection RedundantOperationOnEmptyContainer,ResultOfMethodCallIgnored
-        xs.stream()
-            .map(t -> t * 2)
-            .filter(t -> t % 2 != 0)
-            .collect(Collectors.toList());
     }
 
     /**
      * Implementacija ``Visitor`` vmesnika:
      */
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(Call call) {
         println("Call", call, call.name);
         inNewScope(() -> {
+            printDefinedAt(call);
+            printTypedAs(call);
             call.arguments.forEach((arg) -> arg.accept(this));
         });
     }
@@ -89,16 +93,17 @@ public class PrettyPrintVisitor1 implements Visitor {
     public void visit(Binary binary) {
         println("Binary", binary, binary.operator.toString());
         inNewScope(() -> {
+            printTypedAs(binary);
             binary.left.accept(this);
             binary.right.accept(this);
         });
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(Block block) {
         println("Block", block);
         inNewScope(() -> {
+            printTypedAs(block);
             block.expressions.forEach((expr) -> expr.accept(this));
         });
     }
@@ -107,6 +112,7 @@ public class PrettyPrintVisitor1 implements Visitor {
     public void visit(For forLoop) {
         println("For", forLoop);
         inNewScope(() -> {
+            printTypedAs(forLoop);
             forLoop.counter.accept(this);
             forLoop.low.accept(this);
             forLoop.high.accept(this);
@@ -118,12 +124,17 @@ public class PrettyPrintVisitor1 implements Visitor {
     @Override
     public void visit(Name name) {
         println("Name", name, name.name);
+        inNewScope(() -> {
+            printDefinedAt(name);
+            printTypedAs(name);
+        });
     }
 
     @Override
     public void visit(IfThenElse ifThenElse) {
         println("IfThenElse", ifThenElse);
         inNewScope(() -> {
+            printTypedAs(ifThenElse);
             ifThenElse.condition.accept(this);
             ifThenElse.thenExpression.accept(this);
             ifThenElse.elseExpression.ifPresent(expr -> expr.accept(this));
@@ -133,13 +144,14 @@ public class PrettyPrintVisitor1 implements Visitor {
     @Override
     public void visit(Literal literal) {
         println("Literal", literal, literal.type.toString(), "(", literal.value, ")");
+        inNewScope(() -> printTypedAs(literal));
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(Unary unary) {
         println("Unary", unary, unary.operator.toString());
         inNewScope(() -> {
+            printTypedAs(unary);
             unary.expr.accept(this);
         });
     }
@@ -148,6 +160,7 @@ public class PrettyPrintVisitor1 implements Visitor {
     public void visit(While whileLoop) {
         println("While", whileLoop);
         inNewScope(() -> {
+            printTypedAs(whileLoop);
             whileLoop.condition.accept(this);
             whileLoop.body.accept(this);
         });
@@ -157,6 +170,7 @@ public class PrettyPrintVisitor1 implements Visitor {
     public void visit(Where where) {
         println("Where", where);
         inNewScope(() -> {
+            printTypedAs(where);
             where.defs.accept(this);
             where.expr.accept(this);
         });
@@ -164,7 +178,6 @@ public class PrettyPrintVisitor1 implements Visitor {
 
     // Definicije:
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(Defs defs) {
         println("Defs", defs);
@@ -177,35 +190,36 @@ public class PrettyPrintVisitor1 implements Visitor {
     public void visit(FunDef funDef) {
         println("FunDef", funDef, funDef.name);
         inNewScope(() -> {
+            printTypedAs(funDef);
             visit(funDef.parameters);
             funDef.type.accept(this);
             funDef.body.accept(this);
         });
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(TypeDef typeDef) {
         println("TypeDef", typeDef, typeDef.name);
         inNewScope(() -> {
+            printTypedAs(typeDef);
             typeDef.type.accept(this);
         });
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(VarDef varDef) {
         println("VarDef", varDef, varDef.name);
         inNewScope(() -> {
+            printTypedAs(varDef);
             varDef.type.accept(this);
         });
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(FunDef.Parameter parameter) {
         println("Parameter", parameter, parameter.name);
         inNewScope(() -> {
+            printTypedAs(parameter);
             parameter.type.accept(this);
         });
     }
@@ -216,6 +230,7 @@ public class PrettyPrintVisitor1 implements Visitor {
     public void visit(Array array) {
         println("Array", array);
         inNewScope(() -> {
+            printTypedAs(array);
             print("[", Integer.toString(array.size), "]\n");
             array.type.accept(this);
         });
@@ -224,16 +239,22 @@ public class PrettyPrintVisitor1 implements Visitor {
     @Override
     public void visit(Atom atom) {
         println("Atom", atom, atom.type.toString());
+        inNewScope(() -> {
+            printTypedAs(atom);
+        });
     }
 
     @Override
     public void visit(TypeName name) {
         println("TypeName", name, name.identifier);
+        inNewScope(() -> {
+            printDefinedAt(name);
+            printTypedAs(name);
+        });
     }
 
     // ----------------------------------
 
-    @SuppressWarnings("CodeBlock2Expr")
     public <T extends Ast> void visit(List<T> nodes) {
         nodes.forEach((node) -> {
             node.accept(this);
@@ -271,5 +292,25 @@ public class PrettyPrintVisitor1 implements Visitor {
             stream.print(a);
         }
         stream.println();
+    }
+
+    private void printDefinedAt(Ast node) {
+        if (definitions.isPresent()) {
+            var definition = definitions.get().valueFor(node);
+            if (definition.isEmpty()) {
+                throw new RuntimeException(node.toString());
+            }
+            print("# defined at: ", definition.get().position.toString(), "\n");
+        }
+    }
+
+    private void printTypedAs(Ast node) {
+        if (types.isPresent()) {
+            var type = types.get().valueFor(node);
+            if (type.isEmpty()) {
+                throw new RuntimeException(node.toString());
+            }
+            print("# typed as: ", type.get().toString(), "\n");
+        }
     }
 }

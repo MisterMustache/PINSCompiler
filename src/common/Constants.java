@@ -1,5 +1,6 @@
 package common;
 
+@SuppressWarnings("unused")
 public class Constants {
     private Constants() {}
 
@@ -15,7 +16,7 @@ public class Constants {
     public static final String seedLabel        = "seed";
 
     static {
-        /**
+        /*
          * Ciljna arhitektura je x86.
          */
         WordSize = x86;

@@ -60,7 +60,7 @@ public class Parser {
     }
 
     private void easyReport(String expected) {
-        Report.error(currentSymbol.position, "SYN: Expected " + expected + " got " + currentSymbol.tokenType +
+        Report.error(currentSymbol.position, "SYN: Expected " + expected + ", got " + currentSymbol.tokenType +
                 ":'" + currentSymbol.lexeme + "'.");
     }
 
@@ -830,6 +830,7 @@ public class Parser {
      * Izpiše produkcijo na izhodni tok.
      */
     private void dump(String production) {
+        //noinspection OptionalIsPresent
         if (productionsOutputStream.isPresent()) {
             productionsOutputStream.get().println(production);
         }

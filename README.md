@@ -13,12 +13,27 @@ Ogrodje prevajalnika (večina pod commit-om "Initial commit") je bilo pripravlje
     <tr>
         <td>1</td>
         <td>LEX</td>
-        <td>Leksikalni analizator</td>
+        <td>Leksikalna analiza</td>
     </tr>
     <tr>
         <td>2</td>
         <td>SYN</td>
-        <td>Sintaksni analizator</td>
+        <td>Sintaktična analiza</td>
+    </tr>
+    <tr>
+        <td>3</td>
+        <td>AST</td>
+        <td>Abstraktna sintaktična analiza</td>
+    </tr>
+    <tr>
+        <td>4</td>
+        <td>NAME</td>
+        <td>Semantična analiza: Rokovanje imen</td>
+    </tr>
+    <tr>
+        <td>5</td>
+        <td>TYP</td>
+        <td>Semantična analiza: Preverjanje tipov</td>
     </tr>
     </tbody>
 </table>
@@ -35,27 +50,17 @@ make build
 cd .build
 java -cp ".:../lib/*" Main PINS <sourceFile> [--dump <dump>][--exec <exec>][--memory <memory>]
 ```
-`dump`:
-- `LEX`
-- `SYN`
-
-`exec`:
-- `LEX`
-- `SYN`
+- `--dump`: Oznaka_faze
+- `--exec`: Oznaka_faze
+- `--memory`: Spomin
 
 ### Potrebe
 Za izvajanje je potrebna knjižnica `ArgPar`, ki je uporabljena za razčlenitev argumentov.
 
 ## Testiranje
-Za namene ugotavljanje pravilnosti se prevajalnik lahko testira nad testi z ali brez uporabe skripte.
+Za namene ugotavljanje pravilnosti se prevajalnik lahko testira nad testi z ali brez uporabe `TestsRunner`-ja.
 
-```shell
-./test.sh <phase> [file]
-```
-
-Potrebno je specificirati fazo (`LEX`, `SYN`, ...), ki se bo testira z njo namenskimi testi.
-Če bo podana datoteka se bo izvedel samo specificiran test sicer se bodo vsi, ki so narejeni za specifično fazo.
-Skripta bo po vsakem testu počakala na uporabnikov vnos kot potrdilo za izvedbo naslednjega testa.
+- [Navodila za testiranje](TestsRunner.md)
 
 ---
 

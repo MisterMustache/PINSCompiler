@@ -1,4 +1,0 @@
-var lepo : integer;
-fun f (_:integer) : integer = (
-    fn(10, 20, 30)
-)

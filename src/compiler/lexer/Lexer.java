@@ -378,7 +378,7 @@ public class Lexer {
      * @return <code>boolean</code>
      */
 
-//    @SuppressWarnings("All")
+    @SuppressWarnings("All")
     private boolean isLetter(char givenChar) {
         if ((int)givenChar >= 65 && (int)givenChar <= 90) // A to Z
             return true;

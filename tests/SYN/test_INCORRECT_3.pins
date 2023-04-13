@@ -1,2 +1,0 @@
-var lepo : integer;
-fun f (_:integer) : integer = a < b < c

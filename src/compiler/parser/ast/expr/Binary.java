@@ -36,9 +36,11 @@ public class Binary extends Expr {
         this.right = right;
     }
 
-	@Override public void accept(Visitor visitor) { visitor.visit(this); }
+	@Override public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 
-    @SuppressWarnings("UnnecessaryEnumModifier")
+    @SuppressWarnings({"UnnecessaryEnumModifier", "unused"})
     public static enum Operator {
         ADD,       // +
         SUB,       // -

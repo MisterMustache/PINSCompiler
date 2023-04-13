@@ -1,2 +1,0 @@
-# fail at function definition (identifier)
-fun 15 (a:integer, b:integer) : integer = a + b
