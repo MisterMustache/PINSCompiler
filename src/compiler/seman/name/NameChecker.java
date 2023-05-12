@@ -16,6 +16,7 @@ import compiler.parser.ast.type.*;
 import compiler.seman.common.NodeDescription;
 import compiler.seman.name.env.SymbolTable;
 import compiler.seman.name.env.SymbolTable.DefinitionAlreadyExistsException;
+import stdlib.StandardFunctions;
 
 public class NameChecker implements Visitor {
     /**
@@ -55,28 +56,34 @@ public class NameChecker implements Visitor {
             // Ali je up. def. tip dejansko uporabljen pri definiciji tipa?
             // Da (pravilno)
             if (def.get() instanceof FunDef) {
-                definitions.store(def.get(), call);
+                this.definitions.store(def.get(), call);
                 for (var arg : call.arguments)
                     arg.accept(this);
-            // Ne (napaka)
+                // Ne (napaka)
             } else {
                 /* npr.
                  * `typ t : integer;
                  * t(1)` */
                 if (def.get() instanceof TypeDef) {
-                    Report.error(call.position,"SEM: Expected function, got type '" + def.get().name + "'.");
+                    Report.error(call.position, "SEM: Expected function, got type '" + def.get().name + "'.");
                 }
                 /* npr.
                  * `var v : integer;
                  * v(1)` */
                 else if (def.get() instanceof VarDef)
-                    Report.error(call.position,"SEM: Expected function, got variable '" + def.get().name + "'.");
-                // "Future-proof" ujemanje neke neznane definicije.
+                    Report.error(call.position, "SEM: Expected function, got variable '" + def.get().name + "'.");
+                    // "Future-proof" ujemanje neke neznane definicije.
                 else
-                    Report.error(call.position,"SEM: Expected function, got definition '" + def.get().name + "'.");
+                    Report.error(call.position, "SEM: Expected function, got definition '" + def.get().name + "'.");
             }
+        }
+        // Preverjanje ujemanju funkcije iz standardne knjižnice
+        else if (StandardFunctions.exists(call.name)) {
+            //noinspection UnnecessaryReturnStatement
+            return;
+        }
         // Definicija NE obstaja
-        } else {
+        else {
             Report.error(call.position, "SEM: Unknown function '" + call.name + "'.");
         }
     }

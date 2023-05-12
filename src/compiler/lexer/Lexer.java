@@ -70,14 +70,6 @@ public class Lexer {
             final char currentChar = source.charAt(i); // znak na trenutnem mestu
             colCntr++;
 
-            // FILTRIRANJE NEVELJAVNIH ZNAKOV
-            if ((int) currentChar > 127) {
-                Report.error(
-                        new Position(new Position.Location(lineCntr, colCntr), new Position.Location(lineCntr, colCntr)),
-                        "LEX: Character \"" + currentChar + "\" is not valid. Only ASCII characters are valid."
-                );
-            }
-
             if (currentChar == (char) 35) // char == "#"
             {
                 inComment = true;
@@ -86,6 +78,14 @@ public class Lexer {
                 inComment = false;
                 lineCntr++;
                 colCntr = 0;
+            }
+
+            // FILTRIRANJE NEVELJAVNIH ZNAKOV
+            if ((int) currentChar > 127 && !inComment) {
+                Report.error(
+                        new Position(new Position.Location(lineCntr, colCntr), new Position.Location(lineCntr, colCntr)),
+                        "LEX: Character \"" + currentChar + "\" is not valid. Only ASCII characters are valid."
+                );
             }
 
             if (!inComment) { // prepiši znak v novo izvorno kodo, če le ta ni v komentarju

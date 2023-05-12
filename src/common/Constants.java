@@ -15,6 +15,10 @@ public class Constants {
     public static final String randIntLabel     = "rand_int";
     public static final String seedLabel        = "seed";
 
+    // 'Registri'
+    public static final String framePointer     = "{FP}";
+    public static final String stackPointer     = "{SP}";
+
     static {
         /*
          * Ciljna arhitektura je x86.
