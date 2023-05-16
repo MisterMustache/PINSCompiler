@@ -51,8 +51,12 @@ public class NameChecker implements Visitor {
         // Pridobi definicijo funkcije
         var def = symbolTable.definitionFor(call.name);
 
+        // Preverjanje ujemanju funkcije iz standardne knjižnice
+        if (StandardFunctions.exists(call.name)) {
+            call.arguments.forEach(expr -> expr.accept(this));
+        }
         // Definicija obstaja
-        if (def.isPresent()) {
+        else if (def.isPresent()) {
             // Ali je up. def. tip dejansko uporabljen pri definiciji tipa?
             // Da (pravilno)
             if (def.get() instanceof FunDef) {
@@ -76,11 +80,6 @@ public class NameChecker implements Visitor {
                 else
                     Report.error(call.position, "SEM: Expected function, got definition '" + def.get().name + "'.");
             }
-        }
-        // Preverjanje ujemanju funkcije iz standardne knjižnice
-        else if (StandardFunctions.exists(call.name)) {
-            //noinspection UnnecessaryReturnStatement
-            return;
         }
         // Definicija NE obstaja
         else {

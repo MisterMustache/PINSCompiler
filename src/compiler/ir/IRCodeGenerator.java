@@ -89,51 +89,43 @@ public class IRCodeGenerator implements Visitor {
 
     @Override
     public void visit(Call call) {
+        // --- Laying the field ---
+        var argSeq = new ArrayList<IRExpr>();           // seznam argumentov
+        Label functionLabel;                            // oznaka
+        int SL;                                         // statični nivo
+        Optional<MoveStmt> oldFPIR = Optional.empty();  // oldFP
+
         // --- Klic funkcije iz standardne knjižnice ---
         if (StandardFunctions.exists(call.name)) {
-            var argSeq = new ArrayList<IRExpr>();
-            argSeq.add(new ConstantExpr(-1));
-            call.arguments.forEach(arg -> {
-                arg.accept(this);
-                var callArgIRNode = this.imcCode.valueFor(arg);
+            functionLabel = Label.named(call.name);
+            SL = 1;
+        } else {
+            // Okvir funkcije, ki se kliče
+            var functionFrame = this.frames.valueFor(this.definitions.valueFor(call).get()).get();
+            functionLabel = functionFrame.label;
+            SL = functionFrame.staticLevel;
 
-                callArgIRNode.ifPresentOrElse(
-                        irNode -> {
-                            if (irNode instanceof IRExpr irExpr)
-                                argSeq.add(irExpr);
-                            else
-                                Report.error(arg.position, "IMC: Compiler error. Call Argument is not an Expression.");
-                        },
-                        () -> Report.error(arg.position, "IMC: Compiler error. IR of Call Argument has failed to generate!")
-                );
-            });
-            this.imcCode.store(
-                    new CallExpr(
-                            Frame.Label.named(call.name),
-                            argSeq
+            oldFPIR = Optional.of(new MoveStmt(
+                    new MemExpr(
+                            new BinopExpr(
+                                    NameExpr.SP(),
+                                    new ConstantExpr(functionFrame.oldFPOffset()),
+                                    BinopExpr.Operator.SUB
+                            )
                     ),
-                    call
-            );
-            return;
+                    NameExpr.FP()
+            ));
         }
-
-        // Okvir funkcije, ki se kliče
-        var functionFrame = this.frames.valueFor(this.definitions.valueFor(call).get()).get();
-
-        // --- Seznam argumentov, oznaka, statični nivo ---
-        var argSeq = new ArrayList<IRExpr>();
-        var functionLabel = functionFrame.label;
-        var SL = functionFrame.staticLevel;
 
         // --- Generiranje argumentov ---
         // Prvi argument je statični nivo.
-        if (SL <= 1)                            // Če je funkcija na globalni ravni je statični nivo brezpredmeten
-            argSeq.add(new ConstantExpr(-1));
-        else if (SL > this.staticLevel)         // Če je funkcijo klicala starševska funkcija
+        if (SL <= 1)                                        // Če je funkcija na globalni ravni je statični nivo brezpredmeten
+            argSeq.add(new ConstantExpr(0));
+        else if (SL > this.staticLevel)                     // Če je funkcijo klicala starševska funkcija
             argSeq.add(NameExpr.FP());
-        else if (SL == this.staticLevel)        // Če je funkcija klicala sama sebe
+        else if (SL == this.staticLevel)                    // Če je funkcija klicala sama sebe
             argSeq.add(new MemExpr(NameExpr.FP()));
-        else {                                  // Če je funkcija klicala njeno starševsko funkcijo
+        else {                                              // Če je funkcija klicala njeno starševsko funkcijo
             MemExpr SLJumps = new MemExpr(NameExpr.FP());
             for (int i = 0; i < this.staticLevel - SL; i++)
                 SLJumps = new MemExpr(SLJumps);
@@ -157,7 +149,14 @@ public class IRCodeGenerator implements Visitor {
         });
 
         // --- Shrani kodo ---
-        this.imcCode.store(new CallExpr(functionLabel, argSeq), call);
+        this.imcCode.store(
+                new EseqExpr(
+                        oldFPIR.isEmpty() ? SeqStmt.empty() : oldFPIR.get(),
+                        new CallExpr(functionLabel, argSeq)
+                ),
+                call
+        );
+
     }
 
     @Override

@@ -22,7 +22,6 @@ import compiler.parser.ast.type.TypeName;
 import compiler.seman.common.NodeDescription;
 import compiler.seman.type.type.Type;
 
-@SuppressWarnings({"CodeBlock2Expr", "unused"})
 public class PrettyPrintVisitor3 implements Visitor {
     /**
      * Trenutna indentacija.

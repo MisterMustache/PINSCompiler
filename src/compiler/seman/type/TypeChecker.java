@@ -43,9 +43,10 @@ public class TypeChecker implements Visitor {
 
     @Override
     public void visit(Call call) {
+        call.arguments.forEach(expr -> expr.accept(this));
+
         if (this.definitions.valueFor(call).isEmpty()) {
             if (StandardFunctions.exists(call.name)) {
-                call.arguments.forEach(expr -> expr.accept(this));
                 StandardFunctions.checkType(call, this.types);
                 return;
             }
@@ -188,7 +189,7 @@ public class TypeChecker implements Visitor {
 
     @Override
     public void visit(Name name) {
-        var def = definitions.valueFor(name);
+        var def = this.definitions.valueFor(name);
         if (def.isEmpty()) { Report.error(name.position, "SEM: Unknown symbol '" + name.name + "'."); return; }
 
         if (this.types.valueFor(def.get()).isEmpty()) def.get().accept(this);

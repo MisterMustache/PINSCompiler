@@ -76,7 +76,6 @@ public class PrettyPrintVisitor1 implements Visitor {
      * Implementacija ``Visitor`` vmesnika:
      */
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(Call call) {
         println("Call", call, call.name);
@@ -94,7 +93,6 @@ public class PrettyPrintVisitor1 implements Visitor {
         });
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(Block block) {
         println("Block", block);
@@ -135,7 +133,6 @@ public class PrettyPrintVisitor1 implements Visitor {
         println("Literal", literal, literal.type.toString(), "(", literal.value, ")");
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(Unary unary) {
         println("Unary", unary, unary.operator.toString());
@@ -164,7 +161,6 @@ public class PrettyPrintVisitor1 implements Visitor {
 
     // Definicije:
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(Defs defs) {
         println("Defs", defs);
@@ -183,7 +179,6 @@ public class PrettyPrintVisitor1 implements Visitor {
         });
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(TypeDef typeDef) {
         println("TypeDef", typeDef, typeDef.name);
@@ -192,7 +187,6 @@ public class PrettyPrintVisitor1 implements Visitor {
         });
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(VarDef varDef) {
         println("VarDef", varDef, varDef.name);
@@ -201,7 +195,6 @@ public class PrettyPrintVisitor1 implements Visitor {
         });
     }
 
-    @SuppressWarnings("CodeBlock2Expr")
     @Override
     public void visit(FunDef.Parameter parameter) {
         println("Parameter", parameter, parameter.name);
@@ -233,7 +226,6 @@ public class PrettyPrintVisitor1 implements Visitor {
 
     // ----------------------------------
 
-    @SuppressWarnings("CodeBlock2Expr")
     public <T extends Ast> void visit(List<T> nodes) {
         nodes.forEach((node) -> {
             node.accept(this);
