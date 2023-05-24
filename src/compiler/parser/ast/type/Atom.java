@@ -1,5 +1,4 @@
 /*
- * @Author: turk
  * @Description: Atomarni podatkovni tip.
  */
 

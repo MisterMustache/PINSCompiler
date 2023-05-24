@@ -1,5 +1,4 @@
 /**
- * @Author: turk
  * @Description: Vhodna točka prevajalnika.
  */
 
@@ -15,6 +14,9 @@ import compiler.common.PrettyPrintVisitor4;
 import compiler.frm.Access;
 import compiler.frm.Frame;
 import compiler.frm.FrameEvaluator;
+import compiler.gen.LinCodeGenerator;
+import compiler.gen.Memory;
+import compiler.interpret.Interpreter;
 import compiler.ir.IRCodeGenerator;
 import compiler.ir.IRPrettyPrint;
 import compiler.lexer.Lexer;
@@ -47,7 +49,6 @@ public class Main {
         run(cli, sourceCode);
     }
 
-    @SuppressWarnings("UnnecessaryReturnStatement")
     private static void run(PINS cli, String sourceCode) {
         /*
          * Izvedi leksikalno analizo.
@@ -137,6 +138,22 @@ public class Main {
         }
         if (cli.execPhase == Phase.IMC) {
             return;
+        }
+        /*
+         * Linearizacija vmesne kode.
+         */
+        var memory = new Memory(cli.memory);
+        var mainCodeChunk = new LinCodeGenerator(memory).generateCode(generator.chunks);
+        if (!cli.dumpPhases.contains(Phase.INT)) {
+            return;
+        }
+        /*
+         * Izvajanje vmesne kode.
+         */
+        if (mainCodeChunk.isPresent()) {
+            Optional<PrintStream> outputStream = cli.dumpPhases.contains(Phase.INT) ? Optional.of(System.out) : Optional.empty();
+            var interpreter = new Interpreter(memory, outputStream);
+            interpreter.interpret(mainCodeChunk.get());
         }
     }
 }

@@ -66,11 +66,11 @@ public class IRCodeGenerator implements Visitor {
     private int staticLevel;
 
     public IRCodeGenerator(
-        NodeDescription<IRNode> imcCode,
-        NodeDescription<Frame> frames, 
-        NodeDescription<Access> accesses,
-        NodeDescription<Def> definitions,
-        NodeDescription<Type> types
+            NodeDescription<IRNode> imcCode,
+            NodeDescription<Frame> frames,
+            NodeDescription<Access> accesses,
+            NodeDescription<Def> definitions,
+            NodeDescription<Type> types
     ) {
         requireNonNull(imcCode, frames, accesses, definitions, types);
         this.types = types;
@@ -101,7 +101,8 @@ public class IRCodeGenerator implements Visitor {
             SL = 1;
         } else {
             // Okvir funkcije, ki se kliče
-            var functionFrame = this.frames.valueFor(this.definitions.valueFor(call).get()).get();
+            var def = this.definitions.valueFor(call).get();
+            var functionFrame = this.frames.valueFor(def).get();
             functionLabel = functionFrame.label;
             SL = functionFrame.staticLevel;
 
@@ -126,8 +127,8 @@ public class IRCodeGenerator implements Visitor {
         else if (SL == this.staticLevel)                    // Če je funkcija klicala sama sebe
             argSeq.add(new MemExpr(NameExpr.FP()));
         else {                                              // Če je funkcija klicala njeno starševsko funkcijo
-            MemExpr SLJumps = new MemExpr(NameExpr.FP());
-            for (int i = 0; i < this.staticLevel - SL; i++)
+            MemExpr SLJumps = new MemExpr(new MemExpr(NameExpr.FP()));
+            for (int i = 0; i < this.staticLevel - SL - 1; i++)
                 SLJumps = new MemExpr(SLJumps);
             argSeq.add(SLJumps);
         }
@@ -136,12 +137,16 @@ public class IRCodeGenerator implements Visitor {
         call.arguments.forEach(arg -> {
             arg.accept(this);
             var callArgIRNode = this.imcCode.valueFor(arg);
+            var argType = this.types.valueFor(arg);
 
             callArgIRNode.ifPresentOrElse(
                     irNode -> {
-                        if (irNode instanceof IRExpr irExpr)
-                            argSeq.add(irExpr);
-                        else
+                        if (irNode instanceof IRExpr irExpr) {
+                            if (argType.isPresent() && argType.get().isArray() && irExpr instanceof MemExpr memExpr)
+                                argSeq.add(memExpr.expr);
+                            else
+                                argSeq.add(irExpr);
+                        } else
                             Report.error(arg.position, "IMC: Compiler error. Call Argument is not an Expression.");
                     },
                     () -> Report.error(arg.position, "IMC: Compiler error. IR of Call Argument has failed to generate!")
@@ -167,41 +172,52 @@ public class IRCodeGenerator implements Visitor {
         var binaryLeftIRNode = this.imcCode.valueFor(binary.left);
         var binaryRightIRNode = this.imcCode.valueFor(binary.right);
 
-        if (binaryLeftIRNode.isPresent() && binaryRightIRNode.isPresent()) {
-            if (binaryLeftIRNode.get() instanceof IRExpr binaryLeftIrExpr &&
-                    binaryRightIRNode.get() instanceof IRExpr binaryRightIrExpr) {
-                if (binary.operator == Binary.Operator.ARR) {
-                    if (binaryLeftIrExpr instanceof MemExpr)
-                        binaryLeftIrExpr = ((MemExpr) binaryLeftIrExpr).expr;
-
-                    imcCode.store(
-                            new MemExpr(
-                                    new BinopExpr(
-                                            binaryLeftIrExpr,
-                                            new BinopExpr(
-                                                    binaryRightIrExpr,
-                                                    new ConstantExpr(this.types.valueFor(binary).get().sizeInBytes()),
-                                                    BinopExpr.Operator.MUL
-                                            ),
-                                            BinopExpr.Operator.ADD
-                                    )
-                            ),
-                            binary
-                    );
-                } else if (binary.operator == Binary.Operator.ASSIGN){
-                    imcCode.store(new EseqExpr(new MoveStmt(binaryLeftIrExpr, binaryRightIrExpr), binaryLeftIrExpr), binary);
-                } else if (binopExprOperator != null) {
-                    var binopExpr = new BinopExpr(binaryLeftIrExpr, binaryRightIrExpr, binopExprOperator);
-                    this.imcCode.store(binopExpr, binary);
-                } else {
-                    Report.error(binary.position, "IMC: Compiler error. Binary Operator assertion failed!");
-                }
-            } else {
-                Report.error(binary.position, "IMC: Compiler error. Both sides of Binary are not Expressions.");
-            }
-        } else {
+        if (binaryLeftIRNode.isEmpty() || binaryRightIRNode.isEmpty()) {
             Report.error(binary.position, "IMC: Compiler error. IR of Binary has failed to generate!");
         }
+
+        if (binaryLeftIRNode.get() instanceof IRExpr binaryLeftIrExpr &&
+                binaryRightIRNode.get() instanceof IRExpr binaryRightIrExpr) {
+            if (binary.operator == Binary.Operator.ARR) {
+                var arrType = this.types.valueFor(binary);
+                var leftDef = this.definitions.valueFor(binary.left);
+
+                boolean isReference = !(this.types.valueFor(binary.left).get().isArray() && leftDef.isPresent() && leftDef.get() instanceof Parameter);
+                if (binaryLeftIrExpr instanceof MemExpr && isReference) {
+                    binaryLeftIrExpr = ((MemExpr) binaryLeftIrExpr).expr;
+                }
+                imcCode.store(
+                        new MemExpr(
+                                new BinopExpr(
+                                        binaryLeftIrExpr,
+                                        new BinopExpr(
+                                                binaryRightIrExpr,
+                                                new ConstantExpr(arrType.get().sizeInBytes()),
+                                                BinopExpr.Operator.MUL
+                                        ),
+                                        BinopExpr.Operator.ADD
+                                )
+                        ),
+                        binary
+                );
+            } else if (binary.operator == Binary.Operator.ASSIGN) {
+                imcCode.store(
+                        new EseqExpr(
+                                new MoveStmt(binaryLeftIrExpr, binaryRightIrExpr),
+                                binaryLeftIrExpr
+                        ),
+                        binary
+                );
+            } else if (binopExprOperator != null) {
+                var binopExpr = new BinopExpr(binaryLeftIrExpr, binaryRightIrExpr, binopExprOperator);
+                this.imcCode.store(binopExpr, binary);
+            } else {
+                Report.error(binary.position, "IMC: Compiler error. Binary Operator assertion failed!");
+            }
+        } else {
+            Report.error(binary.position, "IMC: Compiler error. Both sides of Binary are not Expressions.");
+        }
+
     }
 
     private BinopExpr.Operator operatorMap(Binary.Operator operator) {
@@ -262,15 +278,15 @@ public class IRCodeGenerator implements Visitor {
         // Vsi deli for zanke so obvezni
         if (forLoopCounterIRExprOptional.isEmpty() || forLoopLowIRExprOptional.isEmpty() || forLoopHighIRExprOptional.isEmpty() ||
                 forLoopStepIRExprOptional.isEmpty() || forLoopBodyIRExprOptional.isEmpty()) {
-            Report.error(forLoop.position, "IMC: Compiler error. For loop is not present. Suspicious For loop?");
+            Report.error(forLoop.position, "IMC: Compiler error. For loop element(s) are not present. Suspicious For loop?");
             return;
         }
 
         if (forLoopCounterIRExprOptional.get() instanceof IRExpr counterIrExpr &&
                 forLoopLowIRExprOptional.get() instanceof IRExpr lowIrExpr &&
                 forLoopHighIRExprOptional.get() instanceof IRExpr highIrExpr &&
-                forLoopStepIRExprOptional.get() instanceof IRExpr stepIrExpr &&
-                forLoopBodyIRExprOptional.get() instanceof IRExpr bodyIrExpr) {
+                forLoopStepIRExprOptional.get() instanceof IRExpr stepIrExpr /*&&
+                forLoopBodyIRExprOptional.get() instanceof IRExpr bodyIrExpr*/) {
             // --- Oznake za skakanje ---
             var seq = new ArrayList<IRStmt>();
             Label bodyBeginLabel = Label.nextAnonymous();
@@ -290,7 +306,10 @@ public class IRCodeGenerator implements Visitor {
                     bodyEndLabel                             // else : __end
             ));
             seq.add(new LabelStmt(bodyBeginLabel));          // _body Label
-            seq.add(new ExpStmt(bodyIrExpr));                // _body
+            if (forLoopBodyIRExprOptional.get() instanceof IRExpr irExpr)
+                seq.add(new ExpStmt(irExpr));                // _body
+            else
+                seq.add((IRStmt) forLoopBodyIRExprOptional.get());
             seq.add(new MoveStmt(                            // counter + value(step) -> counter
                     counterIrExpr,
                     new BinopExpr(
@@ -305,7 +324,12 @@ public class IRCodeGenerator implements Visitor {
             // --- Shrani kodo ---
             this.imcCode.store(new SeqStmt(seq), forLoop);
         } else {
-            Report.error(forLoop.position, "IMC: Compiler error. All For loop building blocks are not expressions.");
+            Report.error(forLoop.position, "IMC: Compiler error. All For loop building blocks are not expressions." +
+                    "" + (forLoopCounterIRExprOptional.get() instanceof IRExpr) + " " +
+                    (forLoopLowIRExprOptional.get() instanceof IRExpr) + " " +
+                    (forLoopHighIRExprOptional.get() instanceof IRExpr) + " " +
+                    (forLoopStepIRExprOptional.get() instanceof IRExpr) +  " " +
+                    (forLoopBodyIRExprOptional.get() instanceof IRExpr) + " ");
         }
     }
 
@@ -323,7 +347,7 @@ public class IRCodeGenerator implements Visitor {
 //            this.chunks.add(new Chunk.GlobalChunk(global));
         }
         // Če je spremenljivka lokalna ali parameter
-        else if      (nameAccess instanceof Access.Stack stack) {
+        else if (nameAccess instanceof Access.Stack stack) {
             // Pridobi ustrezno število MemExpr glede na statični nivo
             Optional<MemExpr> memExpr = Optional.empty();
             for (int i = 0; i < this.staticLevel - stack.staticLevel; i++) {
@@ -341,8 +365,7 @@ public class IRCodeGenerator implements Visitor {
                     BinopExpr.Operator.ADD
             );
             this.imcCode.store(new MemExpr(binopExpr), name);
-        }
-        else {
+        } else {
             Report.error(name.position, "ICM: Compiler error. Name Access assertion failed!");
         }
 
@@ -361,9 +384,11 @@ public class IRCodeGenerator implements Visitor {
             ifElseIRExpr = this.imcCode.valueFor(ifThenElse.elseExpression.get());
 
         // Pogoj in pozitiven stavek sta obvezna
-        if (ifConditionIRExpr.isEmpty() || ifThenIRExpr.isEmpty())
-            { Report.error(ifThenElse.position, "IMC: Compiler error. If statement is not present. " +
-                    "Suspicious Condition Expression or Then body?"); return; }
+        if (ifConditionIRExpr.isEmpty() || ifThenIRExpr.isEmpty()) {
+            Report.error(ifThenElse.position, "IMC: Compiler error. If statement is not present. " +
+                    "Suspicious Condition Expression or Then body?");
+            return;
+        }
 
         if (ifConditionIRExpr.get() instanceof IRExpr conditionIrExpr && ifThenIRExpr.get() instanceof IRExpr thenIrExpr) {
             // --- Oznake za skakanje ---
@@ -493,7 +518,8 @@ public class IRCodeGenerator implements Visitor {
         var whileBodyIMC = this.imcCode.valueFor(whileLoop.body).get();
 
         // Telo in pogoj morata biti izraza
-        if (whileConditionIMC instanceof IRExpr conditionIrExpr && whileBodyIMC instanceof IRExpr bodyIrExpr) {
+        if (whileConditionIMC instanceof IRExpr conditionIrExpr &&
+                whileBodyIMC instanceof IRExpr bodyIrExpr) {
             // Oznake za skakanje
             var conditionLabel = Label.nextAnonymous();
             var bodyBeginLabel = Label.nextAnonymous();

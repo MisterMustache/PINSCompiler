@@ -1,5 +1,4 @@
 /**
- * @Author: turk
  * @Description: Razred, namenjen obveščanju o poteku prevajanja.
  */
 

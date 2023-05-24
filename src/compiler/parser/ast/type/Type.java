@@ -1,5 +1,4 @@
 /**
- * @Author: turk
  * @Description: Vozlišče v abstraktnem sintaksnem drevesu, 
  * ki predstavlja podatkovni tip.
  */

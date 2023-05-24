@@ -1,5 +1,4 @@
 /**
- * @Author: turk
  * @Description: Implementacija vmesnika `Set`.
  */
 

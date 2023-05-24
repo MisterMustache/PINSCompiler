@@ -351,8 +351,8 @@ public class TypeChecker implements Visitor {
         this.types.store(expressionType, funDef.body);
 
         if (!returnType.equals(this.types.valueFor(funDef.body).get()))
-            Report.error(funDef.position, "SEM: 'fun' type mismatch. Expected '" + returnType.asAtom().get().kind + "', got '"
-                    + expressionType.asAtom().get().kind + "'.");
+            Report.error(funDef.position, "SEM: 'fun' type mismatch. Expected '" + returnType + "', got '"
+                    + expressionType + "'.");
 
         this.types.store(new Type.Function(parameterTypes, returnType), funDef);
     }

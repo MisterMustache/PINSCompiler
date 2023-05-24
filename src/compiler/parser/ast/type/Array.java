@@ -1,5 +1,4 @@
 /**
- * @Author: turk
  * @Description: Podatkovni tip, ki predstavlja tabelo.
  */
 

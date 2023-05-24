@@ -60,6 +60,7 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(Call call) {
+        call.arguments.forEach(expr -> expr.accept(this));
         // Velikost argumenta je vedno WordSize, zato je vseh skupaj = WS * število argumentov (+ 1 WS za SL)
         this.builders.peek().addFunctionCall(call.arguments.size() * Constants.WordSize + Constants.WordSize);
     }
@@ -80,6 +81,10 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(For forLoop) {
+        forLoop.counter.accept(this);
+        forLoop.low.accept(this);
+        forLoop.high.accept(this);
+        forLoop.step.accept(this);
         forLoop.body.accept(this);
     }
 
@@ -110,23 +115,21 @@ public class FrameEvaluator implements Visitor {
 
     @Override
     public void visit(While whileLoop) {
+        whileLoop.condition.accept(this);
         whileLoop.body.accept(this);
     }
 
 
     @Override
     public void visit(Where where) {
-        for (var def : where.defs.definitions)
-            def.accept(this);
+        where.defs.accept(this);
         where.expr.accept(this);
     }
 
 
     @Override
     public void visit(Defs defs) {
-        for (var def : defs.definitions) {
-            def.accept(this);
-        }
+        defs.definitions.forEach(def -> def.accept(this));
     }
 
 

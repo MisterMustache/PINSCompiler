@@ -1,6 +1,5 @@
 /**
- * @Author: turk
- * @Description: Pogojni izraz. 
+ * @Description: Pogojni izraz.
  */
 
 package compiler.parser.ast.expr;
